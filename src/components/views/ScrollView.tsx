@@ -180,7 +180,8 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
 
             measureStaves?.forEach(staffMeasure => {
                 // 1. Staff Lines
-                staffMeasure?.staffLines?.forEach(staffLine => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (staffMeasure as any).staffLines?.forEach((staffLine: any) => {
                     const lineId = (staffLine as {gfxId?: string}).gfxId;
                     if (lineId) {
                         const el = document.getElementById(lineId);
@@ -193,9 +194,12 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
 
                 // 2. Musical Symbols (Notes, Rests, Clefs, etc.)
                 staffMeasure?.staffEntries?.forEach(entry => {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const anyEntry = entry as any;
+
                     // Clefs, Keys, Time Signatures are often at the start
-                    if (entry.graphicalClef) {
-                         const id = (entry.graphicalClef as {vfClef?: {attrs?:{id?:string}}}).vfClef?.attrs?.id
+                    if (anyEntry.graphicalClef) {
+                         const id = (anyEntry.graphicalClef as {vfClef?: {attrs?:{id?:string}}}).vfClef?.attrs?.id
                          if(id) {
                             const el = document.getElementById(id)
                             if (el) {
@@ -204,8 +208,8 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                             }
                          }
                     }
-                    if (entry.graphicalKeySignature) {
-                        const id = (entry.graphicalKeySignature as {vfKeySpec?: {attrs?:{id?:string}}}).vfKeySpec?.attrs?.id
+                    if (anyEntry.graphicalKeySignature) {
+                        const id = (anyEntry.graphicalKeySignature as {vfKeySpec?: {attrs?:{id?:string}}}).vfKeySpec?.attrs?.id
                         if(id) {
                            const el = document.getElementById(id)
                            if (el) {
@@ -214,8 +218,8 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                            }
                         }
                     }
-                    if (entry.graphicalTimeSignature) {
-                         const id = (entry.graphicalTimeSignature as {vfTimeSpec?: {attrs?:{id?:string}}}).vfTimeSpec?.attrs?.id
+                    if (anyEntry.graphicalTimeSignature) {
+                         const id = (anyEntry.graphicalTimeSignature as {vfTimeSpec?: {attrs?:{id?:string}}}).vfTimeSpec?.attrs?.id
                          if(id) {
                            const el = document.getElementById(id)
                            if (el) {
@@ -226,9 +230,9 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                     }
 
 
-                    entry?.graphicalVoiceEntries?.forEach(gve => {
+                    anyEntry.graphicalVoiceEntries?.forEach((gve: any) => {
                         // Notes & Rests
-                        gve?.notes?.forEach(note => {
+                        gve?.notes?.forEach((note: any) => {
                             const noteId = (note as {vfnote?: {attrs?:{id?:string}}[]}).vfnote?.[0]?.attrs?.id;
                             if (noteId) {
                                 const el = document.getElementById(noteId) || document.getElementById(`vf-${noteId}`);
@@ -240,20 +244,22 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                             }
                         });
                          // Beams
-                        gve?.vfbeams?.forEach((beam: {attrs?:{id?:string}}) => {
-                            const beamId = beam.attrs?.id
-                            if(beamId){
-                                const el = document.getElementById(beamId)
-                                if(el) {
-                                    measureElements.push(el)
-                                    newAllSymbols.push(el)
+                        if(gve.vfbeams){
+                            gve.vfbeams.forEach((beam: {attrs?:{id?:string}}) => {
+                                const beamId = beam.attrs?.id
+                                if(beamId){
+                                    const el = document.getElementById(beamId)
+                                    if(el) {
+                                        measureElements.push(el)
+                                        newAllSymbols.push(el)
+                                    }
                                 }
-                            }
-                        })
+                            })
+                        }
                     });
 
                     // Slurs and Ties
-                    entry?.graphicalSlurs?.forEach(slur => {
+                    anyEntry.graphicalSlurs?.forEach((slur: any) => {
                         const slurId = (slur as {vfSlur?: {attrs?: {id?: string}}}).vfSlur?.attrs?.id;
                         if (slurId) {
                             const el = document.getElementById(slurId);
@@ -264,7 +270,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                         }
                     });
 
-                    entry?.Ties?.forEach(tie => {
+                    anyEntry.Ties?.forEach((tie: any) => {
                         const tieId = (tie as {vfTie?: {attrs?: {id?: string}}}).vfTie?.attrs?.id;
                         if (tieId) {
                             const el = document.getElementById(tieId);
