@@ -168,81 +168,118 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
             if (closestNote) (closestNote as NoteData).stemElement = stem as HTMLElement
         })
 
-        // D. UNIVERSAL CONTENT MAP (Visibility & Coloring) - CRITICAL OPTIMIZATION
-        const selector = 'svg path, svg rect, svg text'
-        const allElements = containerRef.current.querySelectorAll(selector) // NodeList (faster than Array.from)
-        const containerRect = containerRef.current.getBoundingClientRect()
-        const containerLeft = containerRect.left
+        // D. REFACTORED UNIVERSAL CONTENT MAP (OSMD Model-Driven)
+        measureList.forEach((measureStaves, measureIndex) => {
+            const measureNumber = measureIndex + 1;
+            const measureElements: HTMLElement[] = [];
 
-        // Helper: Binary Search for Measure Index
-        const findMeasureForX = (x: number) => {
-            let low = 0
-            let high = measureBounds.length - 1
-            while (low <= high) {
-                const mid = Math.floor((low + high) / 2)
-                const bound = measureBounds[mid]
-                if (x >= bound.left && x <= bound.right) {
-                    return bound
-                } else if (x < bound.left) {
-                    high = mid - 1
-                } else {
-                    low = mid + 1
-                }
+            measureStaves.forEach(staffMeasure => {
+                // 1. Staff Lines
+                staffMeasure.staffLines.forEach(staffLine => {
+                    const lineId = (staffLine as {gfxId?: string}).gfxId;
+                    if (lineId) {
+                        const el = document.getElementById(lineId);
+                        if (el) {
+                            newStaffLines.push(el);
+                            // Staff lines are not musical symbols, so we don't add to allSymbols
+                        }
+                    }
+                });
+
+                // 2. Musical Symbols (Notes, Rests, Clefs, etc.)
+                staffMeasure.staffEntries.forEach(entry => {
+                    // Clefs, Keys, Time Signatures are often at the start
+                    if (entry.graphicalClef) {
+                         const id = (entry.graphicalClef as {vfClef?: {attrs?:{id?:string}}}).vfClef?.attrs?.id
+                         if(id) {
+                            const el = document.getElementById(id)
+                            if (el) {
+                                measureElements.push(el);
+                                newAllSymbols.push(el)
+                            }
+                         }
+                    }
+                    if (entry.graphicalKeySignature) {
+                        const id = (entry.graphicalKeySignature as {vfKeySpec?: {attrs?:{id?:string}}}).vfKeySpec?.attrs?.id
+                        if(id) {
+                           const el = document.getElementById(id)
+                           if (el) {
+                               measureElements.push(el);
+                               newAllSymbols.push(el)
+                           }
+                        }
+                    }
+                    if (entry.graphicalTimeSignature) {
+                         const id = (entry.graphicalTimeSignature as {vfTimeSpec?: {attrs?:{id?:string}}}).vfTimeSpec?.attrs?.id
+                         if(id) {
+                           const el = document.getElementById(id)
+                           if (el) {
+                               measureElements.push(el);
+                               newAllSymbols.push(el)
+                           }
+                        }
+                    }
+
+
+                    entry.graphicalVoiceEntries.forEach(gve => {
+                        // Notes & Rests
+                        gve.notes.forEach(note => {
+                            const noteId = (note as {vfnote?: {attrs?:{id?:string}}[]}).vfnote?.[0]?.attrs?.id;
+                            if (noteId) {
+                                const el = document.getElementById(noteId) || document.getElementById(`vf-${noteId}`);
+                                if (el) {
+                                     const group = el.closest('.vf-stavenote') as HTMLElement || el as HTMLElement
+                                     measureElements.push(group)
+                                     newAllSymbols.push(group)
+                                }
+                            }
+                        });
+                         // Beams
+                        if(gve.vfbeams){
+                            gve.vfbeams.forEach((beam: {attrs?:{id?:string}}) => {
+                                const beamId = beam.attrs?.id
+                                if(beamId){
+                                    const el = document.getElementById(beamId)
+                                    if(el) {
+                                        measureElements.push(el)
+                                        newAllSymbols.push(el)
+                                    }
+                                }
+                            })
+                        }
+                    });
+
+                    // Slurs and Ties
+                    entry.graphicalSlurs.forEach(slur => {
+                        const slurId = (slur as {vfSlur?: {attrs?: {id?: string}}}).vfSlur?.attrs?.id;
+                        if (slurId) {
+                            const el = document.getElementById(slurId);
+                            if (el) {
+                                measureElements.push(el);
+                                newAllSymbols.push(el);
+                            }
+                        }
+                    });
+
+                    entry.Ties.forEach(tie => {
+                        const tieId = (tie as {vfTie?: {attrs?: {id?: string}}}).vfTie?.attrs?.id;
+                        if (tieId) {
+                            const el = document.getElementById(tieId);
+                            if (el) {
+                                measureElements.push(el);
+                                newAllSymbols.push(el);
+                            }
+                        }
+                    });
+                });
+            });
+
+            if (measureElements.length > 0) {
+                newMeasureContentMap.set(measureNumber, measureElements);
             }
-            return null
-        }
+        });
 
-        // Loop optimization: for loop is faster than forEach
-        for (let i = 0; i < allElements.length; i++) {
-            const element = allElements[i] as HTMLElement
-
-            // Skip hidden elements check if possible, or assume all rendered elements are visible
-            // removing getComputedStyle check improves perf massively.
-            // SVG elements usually don't have display:none unless we put it there.
-
-            const rect = element.getBoundingClientRect()
-
-            // Basic classification based on classes (VexFlow adds classes)
-            // .vf-stavenote, .vf-beam, .vf-rest, .vf-clef...
-            // Note: classList.contains is fast.
-            const cl = element.classList
-            // Check if it's a known VexFlow musical element or child of one
-            const isMusical = cl.contains('vf-stavenote') || cl.contains('vf-beam') ||
-                cl.contains('vf-rest') || cl.contains('vf-clef') ||
-                cl.contains('vf-keysignature') || cl.contains('vf-timesignature') ||
-                cl.contains('vf-stem') || cl.contains('vf-modifier') ||
-                element.closest('.vf-stavenote, .vf-beam, .vf-rest, .vf-clef, .vf-keysignature, .vf-timesignature, .vf-stem, .vf-modifier') !== null
-
-            // Detect Staff Lines (Geometry heuristic)
-            if (!isMusical) {
-                // Staff lines are typically wide and thin
-                const isWide = rect.width > 50
-                const isThin = rect.height < 3
-                if (isWide && isThin) {
-                    newStaffLines.push(element)
-                    continue // Done with this element
-                }
-            }
-
-            // It's a Symbol (Note, Ledger Line, Clef, Text, etc.)
-            newAllSymbols.push(element)
-
-            // Bucket into measure using Binary Search instead of Linear Find
-            const elCenterX = (rect.left - containerLeft) + (rect.width / 2)
-
-            // Optimization: Most elements are in the "current" or "next" measure relative to previous loop
-            // But simple binary search is O(log M), very fast.
-            const match = findMeasureForX(elCenterX)
-
-            if (match) {
-                let mList = newMeasureContentMap.get(match.index)
-                if (!mList) {
-                    mList = []
-                    newMeasureContentMap.set(match.index, mList)
-                }
-                mList.push(element)
-            }
-        }
+        console.log('[ScoreViewerScroll] New Maps -> Symbols:', newAllSymbols.length, 'StaffLines:', newStaffLines.length, 'MeasureContent Buckets:', newMeasureContentMap.size);
 
         noteMap.current = newNoteMap
         measureContentMap.current = newMeasureContentMap
@@ -250,7 +287,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
         allSymbolsRef.current = newAllSymbols
         console.timeEnd('[ScoreViewerScroll] Spatial Map Build')
 
-    }, [])
+    }, [osmdRef])
 
     // ... (Init Effect) - REMOVED (Handled by hook)
     /*
@@ -640,7 +677,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
         } catch (err) {
             console.error('Error positioning cursor:', err)
         }
-    }, [findCurrentMeasure, isLoaded, mode, revealMode, updateMeasureVisibility, popEffect, jumpEffect, glowEffect, darkMode, highlightNote, cursorPosition, isLocked, curtainLookahead])
+    }, [findCurrentMeasure, isLoaded, mode, revealMode, updateMeasureVisibility, popEffect, jumpEffect, glowEffect, darkMode, highlightNote, cursorPosition, isLocked, curtainLookahead, osmdRef, audioRef])
 
     // ... (Animation Loop)
     useEffect(() => {
@@ -699,7 +736,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                 audioRef.current.currentTime = targetAnchor.time
             }
         }
-    }, [anchors, audioRef])
+    }, [anchors, audioRef, osmdRef])
 
     return (
         <div ref={scrollContainerRef} className="relative w-full h-full overflow-auto overscroll-none bg-white">

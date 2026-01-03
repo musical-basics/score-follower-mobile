@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { OpenSheetMusicDisplay as OSMD } from 'opensheetmusicdisplay'
 
-export function useOSMD(containerRef: React.RefObject<HTMLDivElement>, musicXmlUrl: string | undefined, options: any) {
+export function useOSMD(containerRef: React.RefObject<HTMLDivElement>, musicXmlUrl: string | undefined, options: Record<string, unknown>) {
     const osmdRef = useRef<OSMD | null>(null)
     const [isLoaded, setIsLoaded] = useState(false)
 
@@ -20,7 +20,7 @@ export function useOSMD(containerRef: React.RefObject<HTMLDivElement>, musicXmlU
         }).catch(err => console.error("OSMD Error:", err))
 
         return () => { osmdRef.current = null; setIsLoaded(false) }
-    }, [musicXmlUrl]) // Re-run if URL changes
+    }, [musicXmlUrl, containerRef, options]) // Re-run if URL changes
 
     return { osmdRef, isLoaded }
 }
