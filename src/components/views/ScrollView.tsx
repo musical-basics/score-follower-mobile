@@ -178,9 +178,9 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
             const measureNumber = measureIndex + 1;
             const measureElements: HTMLElement[] = [];
 
-            measureStaves.forEach(staffMeasure => {
+            measureStaves?.forEach(staffMeasure => {
                 // 1. Staff Lines
-                staffMeasure.staffLines.forEach(staffLine => {
+                staffMeasure?.staffLines?.forEach(staffLine => {
                     const lineId = (staffLine as {gfxId?: string}).gfxId;
                     if (lineId) {
                         const el = document.getElementById(lineId);
@@ -192,7 +192,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                 });
 
                 // 2. Musical Symbols (Notes, Rests, Clefs, etc.)
-                staffMeasure.staffEntries.forEach(entry => {
+                staffMeasure?.staffEntries?.forEach(entry => {
                     // Clefs, Keys, Time Signatures are often at the start
                     if (entry.graphicalClef) {
                          const id = (entry.graphicalClef as {vfClef?: {attrs?:{id?:string}}}).vfClef?.attrs?.id
@@ -226,9 +226,9 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                     }
 
 
-                    entry.graphicalVoiceEntries.forEach(gve => {
+                    entry?.graphicalVoiceEntries?.forEach(gve => {
                         // Notes & Rests
-                        gve.notes.forEach(note => {
+                        gve?.notes?.forEach(note => {
                             const noteId = (note as {vfnote?: {attrs?:{id?:string}}[]}).vfnote?.[0]?.attrs?.id;
                             if (noteId) {
                                 const el = document.getElementById(noteId) || document.getElementById(`vf-${noteId}`);
@@ -240,22 +240,20 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                             }
                         });
                          // Beams
-                        if(gve.vfbeams){
-                            gve.vfbeams.forEach((beam: {attrs?:{id?:string}}) => {
-                                const beamId = beam.attrs?.id
-                                if(beamId){
-                                    const el = document.getElementById(beamId)
-                                    if(el) {
-                                        measureElements.push(el)
-                                        newAllSymbols.push(el)
-                                    }
+                        gve?.vfbeams?.forEach((beam: {attrs?:{id?:string}}) => {
+                            const beamId = beam.attrs?.id
+                            if(beamId){
+                                const el = document.getElementById(beamId)
+                                if(el) {
+                                    measureElements.push(el)
+                                    newAllSymbols.push(el)
                                 }
-                            })
-                        }
+                            }
+                        })
                     });
 
                     // Slurs and Ties
-                    entry.graphicalSlurs.forEach(slur => {
+                    entry?.graphicalSlurs?.forEach(slur => {
                         const slurId = (slur as {vfSlur?: {attrs?: {id?: string}}}).vfSlur?.attrs?.id;
                         if (slurId) {
                             const el = document.getElementById(slurId);
@@ -266,7 +264,7 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
                         }
                     });
 
-                    entry.Ties.forEach(tie => {
+                    entry?.Ties?.forEach(tie => {
                         const tieId = (tie as {vfTie?: {attrs?: {id?: string}}}).vfTie?.attrs?.id;
                         if (tieId) {
                             const el = document.getElementById(tieId);
