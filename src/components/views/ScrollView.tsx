@@ -60,6 +60,11 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
         const osmd = osmdRef.current
         if (!osmd || !osmd.GraphicSheet || !containerRef.current) return
 
+        // Guard against race condition where MeasureList isn't ready
+        if (!osmd.GraphicSheet.MeasureList || osmd.GraphicSheet.MeasureList.length === 0) {
+            return
+        }
+
         console.time('[ScoreViewerScroll] Spatial Map Build') // Performance Tracking
         const newNoteMap = new Map<number, NoteData[]>()
         const newMeasureContentMap = new Map<number, HTMLElement[]>()
