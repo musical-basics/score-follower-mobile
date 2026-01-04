@@ -28,6 +28,7 @@ function App() {
   const [highlightNote, setHighlightNote] = useState(true)
   const [cursorPosition, setCursorPosition] = useState(0.2)
   const [isIslandMode, setIsIslandMode] = useState(false)
+  const [isScoreLoaded, setIsScoreLoaded] = useState(false)
 
   const [anchors, setAnchors] = useState<Anchor[]>(INITIAL_ANCHORS)
   const [mode, setMode] = useState<AppMode>('PLAYBACK')
@@ -365,7 +366,18 @@ function App() {
             highlightNote={highlightNote} cursorPosition={cursorPosition}
             isLocked={isLocked}
             curtainLookahead={curtainLookahead}
+            onLoadChange={setIsScoreLoaded}
           />
+
+          {/* Loading Overlay */}
+          {!isScoreLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 z-50">
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-lg font-medium text-slate-600 dark:text-slate-300">Loading score...</span>
+              </div>
+            </div>
+          )}
 
           {/* MODULAR ISLAND (Only visible if isIslandMode is TRUE) */}
           {isIslandMode && (

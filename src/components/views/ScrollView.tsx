@@ -22,6 +22,7 @@ interface ScrollViewProps {
     cursorPosition: number
     isLocked: boolean
     curtainLookahead: number // 0-1 slider value for curtain gap
+    onLoadChange?: (isLoaded: boolean) => void
 }
 
 type NoteData = {
@@ -32,7 +33,7 @@ type NoteData = {
     stemElement: HTMLElement | null
 }
 
-export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, popEffect, jumpEffect, glowEffect, darkMode, highlightNote, cursorPosition, isLocked, curtainLookahead }: ScrollViewProps) {
+export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, popEffect, jumpEffect, glowEffect, darkMode, highlightNote, cursorPosition, isLocked, curtainLookahead, onLoadChange }: ScrollViewProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const cursorRef = useRef<HTMLDivElement>(null)
     const curtainRef = useRef<HTMLDivElement>(null)
@@ -48,6 +49,12 @@ export function ScrollView({ audioRef, anchors, mode, musicXmlUrl, revealMode, p
         drawComposer: false, drawCredits: false, drawPartNames: true, drawMeasureNumbers: true,
         renderSingleHorizontalStaffline: true
     })
+
+    // Notify parent of loading state changes
+    useEffect(() => {
+        onLoadChange?.(isLoaded)
+    }, [isLoaded, onLoadChange])
+
     const animationFrameRef = useRef<number | null>(null)
 
     const noteMap = useRef<Map<number, NoteData[]>>(new Map())
