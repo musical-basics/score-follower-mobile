@@ -4,6 +4,7 @@ import { ScrollView } from './components/views/ScrollView'
 import { ScoreControls } from './components/controls/ScoreControls'
 import { AnchorSidebar } from './components/controls/AnchorSidebar'
 import { projectService, type Project } from './services/projectService'
+import { viewService, type ViewConfig } from './services/viewService'
 
 export interface Anchor {
   measure: number
@@ -38,6 +39,10 @@ function App() {
   const [_isSaveModalOpen, setIsSaveModalOpen] = useState(false)
   const [_isLoadModalOpen, setIsLoadModalOpen] = useState(false)
 
+  // Views State
+  const [savedViews, setSavedViews] = useState<ViewConfig[]>([])
+  const [currentViewName, setCurrentViewName] = useState<string | null>(null)
+
   // File State
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [xmlFile, setXmlFile] = useState<File | null>(null)
@@ -58,10 +63,11 @@ function App() {
     return anchor ? anchor.measure : 1
   }, [anchors])
 
-  // Load projects on mount
+  // Load projects and views on mount
   useEffect(() => {
     const init = async () => {
       try {
+        // Load projects
         const list = await projectService.getProjects()
         setProjects(list)
         const lastId = localStorage.getItem('lastProjectId')
@@ -72,12 +78,51 @@ function App() {
             loadProjectState(lastProject)
           }
         }
+        // Load views
+        setSavedViews(viewService.getViews())
       } catch (err) {
         console.error('Initialization failed:', err)
       }
     }
     init()
   }, [])
+
+  // View handlers
+  const loadView = useCallback((viewId: string) => {
+    const view = viewService.getViewById(viewId)
+    if (!view) return
+    setMode(view.mode)
+    setRevealMode(view.revealMode)
+    setDarkMode(view.darkMode)
+    setIsLocked(view.isLocked)
+    setHighlightNote(view.highlightNote)
+    setGlowEffect(view.glowEffect)
+    setPopEffect(view.popEffect)
+    setJumpEffect(view.jumpEffect)
+    setCursorPosition(view.cursorPosition)
+    setCurtainLookahead(view.curtainLookahead)
+    setCurrentViewName(view.name)
+  }, [])
+
+  const saveCurrentView = useCallback(() => {
+    const name = window.prompt('Enter view name:')
+    if (!name) return
+    const newView = viewService.saveView({
+      name,
+      mode,
+      revealMode,
+      darkMode,
+      isLocked,
+      highlightNote,
+      glowEffect,
+      popEffect,
+      jumpEffect,
+      cursorPosition,
+      curtainLookahead
+    })
+    setSavedViews(viewService.getViews())
+    setCurrentViewName(newView.name)
+  }, [mode, revealMode, darkMode, isLocked, highlightNote, glowEffect, popEffect, jumpEffect, cursorPosition, curtainLookahead])
 
   // Handle File Selections
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,6 +371,32 @@ function App() {
           </select>
 
           <div className="w-px h-6 bg-slate-700 mx-2"></div>
+
+          {/* Views Selector */}
+          <div className="flex items-center gap-2">
+            <select
+              value=""
+              className="bg-slate-700 text-white px-3 py-1 rounded text-sm border border-slate-600 focus:outline-none focus:border-cyan-500 max-w-[140px]"
+              onChange={(e) => {
+                if (e.target.value) loadView(e.target.value)
+                e.target.value = ""
+              }}
+            >
+              <option value="">{currentViewName || 'Load View...'}</option>
+              {savedViews.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.isBuiltIn ? `★ ${v.name}` : v.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={saveCurrentView}
+              className="px-2 py-1 bg-slate-700 hover:bg-cyan-600 rounded text-xs font-bold transition-all border border-slate-600"
+              title="Save current view"
+            >
+              💾
+            </button>
+          </div>
         </div>
       </div>
 
