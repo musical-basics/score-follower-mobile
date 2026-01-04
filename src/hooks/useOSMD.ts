@@ -8,6 +8,9 @@ export function useOSMD(containerRef: React.RefObject<HTMLDivElement>, musicXmlU
     useEffect(() => {
         if (!containerRef.current) return
 
+        // Clear any previous content before initializing
+        containerRef.current.innerHTML = ''
+
         // 1. Initialize
         const osmd = new OSMD(containerRef.current, options)
         osmdRef.current = osmd
@@ -19,7 +22,14 @@ export function useOSMD(containerRef: React.RefObject<HTMLDivElement>, musicXmlU
             setIsLoaded(true)
         }).catch(err => console.error("OSMD Error:", err))
 
-        return () => { osmdRef.current = null; setIsLoaded(false) }
+        return () => {
+            // Clear container on cleanup to prevent stale renders
+            if (containerRef.current) {
+                containerRef.current.innerHTML = ''
+            }
+            osmdRef.current = null
+            setIsLoaded(false)
+        }
     }, [musicXmlUrl]) // Re-run if URL changes
 
     return { osmdRef, isLoaded }
